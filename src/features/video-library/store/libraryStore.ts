@@ -18,6 +18,7 @@ import {
   saveLibrary,
 } from '../services/libraryRepository';
 import {
+  decideSavedVideo,
   decideTrashedVideo,
   type GalleryStatus,
 } from '../services/trashPolicy';
@@ -30,6 +31,10 @@ export type GalleryStatusLookup = (uri: string) => Promise<GalleryStatus>;
 export interface TrashSyncResult {
   restored: number;
   purged: number;
+  /** Hidden because the user trashed the gallery copy outside the app. */
+  trashed: number;
+  /** Gallery copy deleted outside the app; the app copy can be saved again. */
+  unlinked: number;
 }
 
 interface LibraryState {
@@ -109,25 +114,44 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       return syncInFlight;
     }
     syncInFlight = (async () => {
-      const result: TrashSyncResult = { restored: 0, purged: 0 };
+      const result: TrashSyncResult = {
+        restored: 0,
+        purged: 0,
+        trashed: 0,
+        unlinked: 0,
+      };
       const now = Date.now();
-      const trashed = get().videos.filter(
-        v => v.deletedAt !== null && v.galleryUri,
-      );
-      for (const video of trashed) {
+      // Every video with a gallery copy: trashed ones may have been restored
+      // or emptied there, visible ones may have been deleted there.
+      const linked = get().videos.filter(v => v.galleryUri);
+      for (const video of linked) {
         let status: GalleryStatus;
         try {
           status = await lookup(video.galleryUri as string);
         } catch {
           continue; // Try again next time.
         }
-        const decision = decideTrashedVideo(video, status, now);
-        if (decision === 'restore') {
-          await get().update(video.id, { deletedAt: null });
-          result.restored++;
-        } else if (decision === 'purge') {
-          await get().remove(video.id);
-          result.purged++;
+        if (video.deletedAt !== null) {
+          const decision = decideTrashedVideo(video, status, now);
+          if (decision === 'restore') {
+            await get().update(video.id, { deletedAt: null });
+            result.restored++;
+          } else if (decision === 'purge') {
+            await get().remove(video.id);
+            result.purged++;
+          }
+          continue;
+        }
+        const decision = decideSavedVideo(status);
+        if (decision === 'trash') {
+          await get().update(video.id, { deletedAt: now });
+          result.trashed++;
+        } else if (decision === 'unlink') {
+          await get().update(video.id, {
+            savedToGallery: false,
+            galleryUri: null,
+          });
+          result.unlinked++;
         }
       }
       return result;

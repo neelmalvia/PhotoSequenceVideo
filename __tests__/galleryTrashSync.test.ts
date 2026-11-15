@@ -4,6 +4,7 @@
 
 import {
   TRASH_RETENTION_MS,
+  decideSavedVideo,
   decideTrashedVideo,
   type GalleryStatus,
 } from '@/features/video-library/services/trashPolicy';
@@ -100,7 +101,7 @@ describe('library trash', () => {
     ]);
   });
 
-  it('skips videos whose status lookup fails and leaves visible ones alone', async () => {
+  it('skips videos whose status lookup fails', async () => {
     const store = useLibraryStore.getState();
     await store.add(video('visible'));
     await store.add(video('flaky'));
@@ -111,7 +112,52 @@ describe('library trash', () => {
     });
     await store.syncTrashWithGallery(lookup);
 
-    expect(lookup).toHaveBeenCalledTimes(1); // only the trashed one
+    expect(lookup).toHaveBeenCalledTimes(2); // both have a gallery copy
     expect(useLibraryStore.getState().videos).toHaveLength(2);
+  });
+
+  it('mirrors gallery-side deletions of visible saved videos', async () => {
+    const store = useLibraryStore.getState();
+    await store.add(video('trashedThere'));
+    await store.add(video('deletedThere'));
+    await store.add(video('untouched'));
+    await store.add(
+      video('notSaved', { savedToGallery: false, galleryUri: null }),
+    );
+
+    const statuses: Record<string, GalleryStatus> = {
+      trashedThere: 'trashed',
+      deletedThere: 'missing',
+      untouched: 'active',
+    };
+    const lookup = jest.fn(
+      async (uri: string) => statuses[uri.split('/').pop()!],
+    );
+    const result = await store.syncTrashWithGallery(lookup);
+
+    expect(result).toMatchObject({
+      trashed: 1,
+      unlinked: 1,
+      restored: 0,
+      purged: 0,
+    });
+    expect(lookup).toHaveBeenCalledTimes(3); // the unsaved video is skipped
+    const state = useLibraryStore.getState();
+    expect(
+      selectVisibleVideos(state)
+        .map(v => v.id)
+        .sort(),
+    ).toEqual(['deletedThere', 'notSaved', 'untouched']);
+    const unlinked = state.videos.find(v => v.id === 'deletedThere');
+    expect(unlinked).toMatchObject({ savedToGallery: false, galleryUri: null });
+  });
+});
+
+describe('decideSavedVideo', () => {
+  it('trashes, unlinks or keeps based on the gallery copy', () => {
+    expect(decideSavedVideo('trashed')).toBe('trash');
+    expect(decideSavedVideo('missing')).toBe('unlink');
+    expect(decideSavedVideo('active')).toBe('keep');
+    expect(decideSavedVideo('unknown')).toBe('keep');
   });
 });

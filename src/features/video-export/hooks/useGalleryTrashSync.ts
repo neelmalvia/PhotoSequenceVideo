@@ -15,13 +15,25 @@ import { getGalleryItemStatus } from '../services/galleryTrash';
 
 const sync = async () => {
   try {
-    const { restored } = await useLibraryStore
+    const { restored, trashed, unlinked } = await useLibraryStore
       .getState()
       .syncTrashWithGallery(getGalleryItemStatus);
     if (restored > 0) {
       toast.success(
         restored === 1 ? 'Video restored' : `${restored} videos restored`,
         "It's back in My videos.",
+      );
+    } else if (trashed > 0) {
+      toast.info(
+        trashed === 1
+          ? 'Video moved to trash'
+          : `${trashed} videos moved to trash`,
+        'Deleted in your gallery. Restore it there to bring it back.',
+      );
+    } else if (unlinked > 0) {
+      toast.info(
+        'Removed from your gallery',
+        'The video is still in My videos and can be saved again.',
       );
     }
   } catch {

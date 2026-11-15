@@ -40,3 +40,26 @@ export function decideTrashedVideo(
     }
   }
 }
+
+export type SavedVideoDecision = 'keep' | 'trash' | 'unlink';
+
+/**
+ * For a video that is visible in the app and was saved to the gallery: what
+ * to do when the user changed the gallery copy outside the app.
+ * - trashed in the gallery: mirror it, so the app copy is hidden too and
+ *   comes back if they restore it there;
+ * - deleted for good: forget the gallery link but keep the app copy, so it
+ *   can be saved again (never destroy the app's video on a gallery action
+ *   that skipped the trash);
+ * - unknown (iOS, no access): leave it alone.
+ */
+export function decideSavedVideo(status: GalleryStatus): SavedVideoDecision {
+  switch (status) {
+    case 'trashed':
+      return 'trash';
+    case 'missing':
+      return 'unlink';
+    default:
+      return 'keep';
+  }
+}
