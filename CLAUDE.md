@@ -23,7 +23,10 @@ yarn android:apk            # release APK (JS bundled, no Metro) -> dist/PhotoSe
 yarn android:apk:install    # install dist APK on the USB-connected phone (adb -d)
 yarn android:apk:device     # both of the above
 yarn android:clean          # gradle clean
+node scripts/generate-app-icons.mjs   # re-render app icons from assets/brand/*.svg
 ```
+
+The splash screen is `react-native-bootsplash`; its regeneration command and the exit animation are described in `docs/PROJECT_GUIDE.md` (App icon and splash screen).
 
 iOS native deps (on first clone and whenever native deps change):
 

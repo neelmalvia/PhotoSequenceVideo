@@ -23,24 +23,37 @@ useGalleryTrashSync();
 
 return (
   <SafeAreaProvider>
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer
+      theme={navigationTheme}
+      onReady={() => setNavigationReady(true)}
+    >
       <RootNavigator />
     </NavigationContainer>
     <FeedbackHost />
+    {splashVisible && (
+      <AnimatedSplash
+        ready={navigationReady && libraryLoaded}
+        onAnimationEnd={() => setSplashVisible(false)}
+      />
+    )}
   </SafeAreaProvider>
 );
 ```
 
 In other words, the library is loaded once when the app mounts, gallery trash
 is synchronized as needed, and navigation and feedback are available to all
-screens.
+screens. The native splash screen stays up until navigation has mounted and
+the library has loaded; `AnimatedSplash` then takes over and animates it away
+(see App icon and splash screen).
 
 ## Functional flow
 
 ```mermaid
 flowchart TD
-    A["index.js registers App"] --> B["src/app/App.tsx"]
+    A["index.js registers App"] --> SP["Native splash (react-native-bootsplash)"]
+    SP --> B["src/app/App.tsx"]
     B --> C["Load saved library + start gallery-trash sync"]
+    C --> AS["AnimatedSplash: logo grows, splash fades out"]
     B --> D["RootNavigator"]
     D --> E["Tabs: Create / My videos"]
 
@@ -71,8 +84,11 @@ flowchart TD
 
 ### Walkthrough
 
-1. **Boot:** `index.js` registers the app. `src/app/App.tsx` loads the library,
-   installs trash synchronization, and mounts `RootNavigator`.
+1. **Boot:** the native splash (logo on the app background) shows while the
+   app starts. `index.js` registers the app. `src/app/App.tsx` loads the
+   library, installs trash synchronization, and mounts `RootNavigator`. Once
+   navigation is ready and the library has loaded, `AnimatedSplash.tsx` grows
+   the logo and fades the splash out.
 2. **Navigate:** `RootNavigator.tsx` defines a stack (`Tabs`, `Compose`,
    `Preview`, `Player`). `MainTabs.tsx` provides the `Create` and `Library`
    tabs.
@@ -216,13 +232,41 @@ gallery copy is in system trash. `useGalleryTrashSync.ts` checks again on
 startup and when the app returns to the foreground; restoring the gallery
 copy makes the video visible again.
 
+### App icon and splash screen
+
+The logo has two sources in `assets/brand/`: `logo-mark.svg` (the mark alone)
+and `app-icon.svg` (the mark on the app background).
+
+- **App icons** are rendered from them by `node scripts/generate-app-icons.mjs`:
+  Android legacy square/round icons per density, an Android 8+ adaptive icon
+  (foreground image + `ic_launcher_background` color), and the iOS 1024px
+  icon.
+- **Splash screen:** `react-native-bootsplash` shows the mark natively at
+  launch (Android 12+ splash API, iOS `BootSplash.storyboard`), so there is no
+  white flash. It is set up in `MainActivity.kt` (`RNBootSplash.init`, next to
+  the fragment factory react-native-screens needs) and `SceneDelegate.swift`
+  (`customize(_:)`). Regenerate its assets after changing the logo:
+
+  ```sh
+  npx react-native-bootsplash generate assets/brand/logo-mark.svg \
+    --platforms=android,ios --background=0B0B0F --logo-width=140
+  ```
+
+- **Exit animation:** `src/app/AnimatedSplash.tsx` uses bootsplash's
+  `useHideAnimation`. A React copy of the splash is laid over the native one,
+  the native splash is hidden, then the logo scales up while the splash fades
+  (timings are constants at the top of the file).
+
 ## Source index
 
 ### App setup and navigation
 
 - `index.js` — registers the React Native app.
 - `App.tsx` — root re-export to `src/app/App.tsx`.
-- `src/app/App.tsx` — app providers, theme, library load, trash sync, feedback.
+- `src/app/App.tsx` — app providers, theme, library load, trash sync,
+  feedback, and when to hide the splash.
+- `src/app/AnimatedSplash.tsx` — splash exit animation (logo grows, splash
+  fades).
 - `src/app/navigation/RootNavigator.tsx` — root stack screens and transitions.
 - `src/app/navigation/MainTabs.tsx` — Create/Library tabs and library badge.
 - `src/app/navigation/types.ts` — typed route parameters and screen props.
@@ -292,21 +336,27 @@ copy makes the video visible again.
 ### Native/platform integration and project setup
 
 - `android/app/src/main/java/com/photosequencevideo/MainActivity.kt` and
-  `MainApplication.kt` — Android app entry and native package registration.
+  `MainApplication.kt` — Android app entry (including splash setup) and
+  native package registration.
 - `android/app/src/main/java/com/photosequencevideo/gallery/GalleryTrashModule.kt`
   and `GalleryTrashPackage.kt` — Android gallery trash/status native module.
 - `ios/PhotoSequenceVideo/AppDelegate.swift` and `SceneDelegate.swift` — iOS
-  app and scene lifecycle entry points.
+  app and scene lifecycle entry points (`SceneDelegate` also starts the
+  splash).
 - `assets/audio/background.wav` — background track used in rendered videos
   (bundled on iOS; copied to `android/app/src/main/assets/audio/` for
   Android); `scripts/generate-music.py` regenerates it.
 - `patches/` — `patch-package` fixes for `react-native-view-recorder` (see
   Recording constraints).
+- `assets/brand/` — logo sources; `scripts/generate-app-icons.mjs` renders
+  the app icons from them. `assets/bootsplash/` holds the generated splash
+  logo used by `AnimatedSplash` (see App icon and splash screen).
 - `package.json` — dependencies and Yarn scripts.
 - `babel.config.js` and `tsconfig.json` — JavaScript/TypeScript configuration,
   including the `@/` alias to `src/`.
 - `jest.config.js`, `jest.setup.js` and `__mocks__/lucideIcon.js` — test
-  runner configuration and native-module mocks.
+  runner configuration and native-module mocks (recorder, picker, file
+  system, camera roll, video, bootsplash, icons).
 
 ### Development and tests
 
@@ -332,6 +382,7 @@ yarn typecheck            # TypeScript check
 yarn test                 # Jest tests
 yarn android:apk          # Release APK -> dist/PhotoSequenceVideo.apk
 yarn android:apk:install  # Install that APK on a USB-connected phone
+node scripts/generate-app-icons.mjs  # Re-render app icons from assets/brand
 ```
 
 ## Known limitations
