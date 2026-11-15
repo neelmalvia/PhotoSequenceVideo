@@ -178,23 +178,24 @@ const renderFrame = useCallback(
 );
 ```
 
-This is why the render stage is a fixed `RecordingView` in
-`ComposeScreen.tsx`: its pixels are the video image, so surrounding UI must
-not scroll into or overlap it.
+The stage's pixels are the video image; see Recording constraints for why it
+lives off-screen.
 
 ### Recording constraints
 
-On Android, `react-native-view-recorder` copies the stage's on-screen pixels
-(`PixelCopy`) and scales them to 720 × 1280. That has three consequences the
-code relies on:
+The recording stage (`RecordingView` + `SlideStage`) is rendered **off-screen**
+in `ComposeScreen.tsx`, past the right edge of the window, at exactly 720
+physical pixels wide (`720 / PixelRatio.get()` points). What the user sees is
+a smaller, rounded mirror: a second `SlideStage` driven by the same frame
+state. This matters because of how `react-native-view-recorder` captures:
 
-- **Resolution:** the stage is sized to exactly 720 physical pixels wide
-  (`720 / PixelRatio.get()` points). A smaller stage would be upscaled and
-  blurry.
-- **Nothing on top:** anything drawn over the stage is recorded with it. The
-  stage sits outside the scroll view, has no rounded clip, and keeps a top
-  margin so toasts can't overlap it. Recording also waits for the screen's
-  enter transition to finish.
+- **Android:** when the view is fully on-screen it copies screen pixels
+  (`PixelCopy`), so anything on top (header, toasts, the enter transition)
+  would be recorded. Off-screen it falls back to drawing the view itself
+  (`View.draw`), which records only the stage.
+- **iOS:** it draws the view hierarchy (`drawHierarchy`) either way.
+- **Resolution:** the stage size is the export size, so it must stay at 720
+  physical pixels; the visible mirror can be any size.
 - **Flattening:** animated photo layers use `collapsable={false}`; Fabric
   flattening while `zIndex` reorders siblings crashed the Android mount layer.
 
@@ -325,8 +326,9 @@ and `app-icon.svg` (the mark on the app background).
   fullscreen). The native controls are off because react-native-video 6.x
   ignores `controlsStyles` on Android.
 - `feedback/index.ts`, `dialog.ts`, `toast.tsx`, `DialogHost.tsx`,
-  `FeedbackHost.tsx` — app-wide toast/dialog feedback. Prefer `toast` and
-  `dialog` over native alerts.
+  `FeedbackHost.tsx` — app-wide toast/dialog feedback. Toasts show at the
+  bottom (above tab bar and footer buttons) with a close button. Prefer
+  `toast` and `dialog` over native alerts.
 - `permissions/galleryPermission.ts`, `permissionDialog.ts` — gallery access
   checks and user-facing permission prompts.
 - `theme/index.ts` — shared colors, spacing, typography, and radii.
