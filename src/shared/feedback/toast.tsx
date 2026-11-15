@@ -9,7 +9,7 @@
  */
 
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Toast, {
   type ToastConfig,
   type ToastConfigParams,
@@ -20,6 +20,7 @@ import {
   CircleCheck,
   ICON_SIZE,
   Info,
+  X,
   type LucideIcon,
 } from '@/shared/icons';
 import { colors, radius, spacing } from '@/shared/theme';
@@ -33,6 +34,7 @@ function show(kind: ToastKind, title: string, message?: string) {
     type: kind,
     text1: title,
     text2: message,
+    position: 'bottom',
     visibilityTime: VISIBILITY_MS[kind],
   });
 }
@@ -74,6 +76,15 @@ function ThemedToast({
           </Text>
         ) : null}
       </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss"
+        hitSlop={10}
+        onPress={() => Toast.hide()}
+        style={({ pressed }) => [styles.close, pressed && styles.closePressed]}
+      >
+        <X color={colors.textMuted} size={ICON_SIZE.sm + 2} />
+      </Pressable>
     </View>
   );
 }
@@ -104,6 +115,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   texts: { flex: 1, gap: 2 },
+  close: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -spacing.xs,
+  },
+  closePressed: { backgroundColor: colors.surface },
   title: { color: colors.text, fontSize: 15, fontWeight: '600' },
   message: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
 });
