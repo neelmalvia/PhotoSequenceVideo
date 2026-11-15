@@ -44,7 +44,9 @@ class GalleryTrashModule(
     val resolver = reactContext.contentResolver
 
     try {
-      if (!exists(uri)) {
+      // An item this app can't see (another owner) is not necessarily gone:
+      // only skip the trash step when it really doesn't exist.
+      if (!exists(uri) && missingOrHidden(uri) == RESULT_MISSING) {
         promise.resolve(RESULT_MISSING)
         return
       }
@@ -98,11 +100,11 @@ class GalleryTrashModule(
           .query(uri, arrayOf(MediaStore.MediaColumns.IS_TRASHED), args, null)
           ?.use { cursor ->
             when {
-              !cursor.moveToFirst() -> RESULT_MISSING
+              !cursor.moveToFirst() -> null
               cursor.getInt(0) == 1 -> RESULT_TRASHED
               else -> STATUS_ACTIVE
             }
-          } ?: RESULT_MISSING
+          } ?: missingOrHidden(uri)
       promise.resolve(status)
     } catch (_: SecurityException) {
       promise.resolve(STATUS_UNKNOWN)
@@ -110,6 +112,26 @@ class GalleryTrashModule(
       promise.reject("E_STATUS_FAILED", e.message, e)
     }
   }
+
+  /**
+   * A query returns no row both for an item that is gone and for one this
+   * app can't see (another owner, and no media read permission, which the
+   * app deliberately doesn't hold). Opening it tells them apart: a missing
+   * item throws FileNotFoundException, a hidden one SecurityException.
+   * Reporting "missing" for a hidden item would make the sync delete the
+   * app's copy, so anything uncertain is "unknown".
+   */
+  private fun missingOrHidden(uri: Uri): String =
+    try {
+      reactContext.contentResolver.openFileDescriptor(uri, "r")?.close()
+      STATUS_ACTIVE
+    } catch (_: java.io.FileNotFoundException) {
+      RESULT_MISSING
+    } catch (_: SecurityException) {
+      STATUS_UNKNOWN
+    } catch (_: Exception) {
+      STATUS_UNKNOWN
+    }
 
   private fun requestTrashConsent(
     uri: Uri,
