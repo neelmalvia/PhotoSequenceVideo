@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-Freshly bootstrapped React Native 0.88 app (`@react-native-community/cli` template), TypeScript, React 19. No app-specific code yet: `App.tsx` still renders the template's `NewAppScreen`. The project name suggests the goal is turning a sequence of photos into a video.
+React Native 0.88 app (TypeScript, React 19) that turns 3–5 gallery photos into a 720×1280 video with dissolve and slide transitions and background music, keeps the results in an in-app library, and saves them to the gallery. Code lives under `src/` by feature (`photo-selection`, `video-composer`, `video-export`, `video-library`) plus `src/shared`. `docs/PROJECT_GUIDE.md` has the flow chart, source index, recording constraints and known limitations; read it before changing rendering or the library.
 
 Package manager: **Yarn** (`yarn.lock` is present; `package-lock.json` has been deleted). Node >= 22.11.
 
@@ -18,7 +18,11 @@ yarn lint                   # ESLint (@react-native config)
 yarn test                   # Jest (@react-native/jest-preset)
 yarn test __tests__/App.test.tsx      # single test file
 yarn test -t "renders correctly"      # single test by name
-npx tsc --noEmit            # type-check (there's no script for it)
+yarn typecheck              # tsc --noEmit
+yarn android:apk            # release APK (JS bundled, no Metro) -> dist/PhotoSequenceVideo.apk
+yarn android:apk:install    # install dist APK on the USB-connected phone (adb -d)
+yarn android:apk:device     # both of the above
+yarn android:clean          # gradle clean
 ```
 
 iOS native deps (on first clone and whenever native deps change):
@@ -35,6 +39,7 @@ cd ios && bundle exec pod install
 - The New Architecture (Fabric/TurboModules) and Hermes are on (`android/gradle.properties`). Any native library you add for photo or video processing has to support the New Architecture.
 - iOS uses Swift (`AppDelegate.swift` plus `SceneDelegate.swift`). Android uses Kotlin under `com.photosequencevideo`.
 - Tests go in `__tests__/` and render components with `react-test-renderer` inside `act()`.
+- User feedback goes through `@/shared/feedback`, never `Alert`: `toast.success/error/info` for short messages, `dialog.confirm/show/alert` for popups that need a decision. `FeedbackHost` is mounted once in `src/app/App.tsx`.
 
 ## Style
 

@@ -1,4 +1,10 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+Photo Sequence Video is a [**React Native**](https://reactnative.dev) app,
+bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+
+# Project guide
+
+See [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) for the source index,
+application flow chart, and code walkthrough.
 
 # Getting Started
 
