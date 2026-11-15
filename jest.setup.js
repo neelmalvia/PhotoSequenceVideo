@@ -50,6 +50,19 @@ jest.mock('@react-native-camera-roll/camera-roll', () => ({
   ),
 }));
 
+jest.mock('react-native-bootsplash', () => ({
+  __esModule: true,
+  default: {
+    hide: jest.fn(() => Promise.resolve()),
+    isVisible: jest.fn(() => false),
+    useHideAnimation: jest.fn(() => ({
+      container: {},
+      logo: { source: 0 },
+      brand: { source: 0 },
+    })),
+  },
+}));
+
 jest.mock('react-native-video', () => {
   const { View } = require('react-native');
   return { __esModule: true, default: View };

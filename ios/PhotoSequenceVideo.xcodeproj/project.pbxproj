@@ -9,11 +9,13 @@
 /* Begin PBXBuildFile section */
 		0C80B921A6F3F58F76C31292 /* libPods-PhotoSequenceVideo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-PhotoSequenceVideo.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		192431519C624AEBA34662DD /* BootSplash.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A294B5E2C2584E4284861CC6 /* BootSplash.storyboard */; };
 		3E6C3DE81668E239B3E09979 /* background.wav in Resources */ = {isa = PBXBuildFile; fileRef = 87794B9112B9C85EB629E4F7 /* background.wav */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		761780EF2CA45674006654EF /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EE2CA45674006654EF /* SceneDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		95CECBDE9A15F87D2ACDEA2A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
+		A06B42C64B974C2FBD03294A /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9698EEAD4A094A5D86F5B02E /* Colors.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +30,8 @@
 		761780EE2CA45674006654EF /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SceneDelegate.swift; path = PhotoSequenceVideo/SceneDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = PhotoSequenceVideo/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		87794B9112B9C85EB629E4F7 /* background.wav */ = {isa = PBXFileReference; includeInIndex = 1; name = background.wav; path = ../assets/audio/background.wav; sourceTree = SOURCE_ROOT; };
+		9698EEAD4A094A5D86F5B02E /* Colors.xcassets */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = folder.assetcatalog; name = Colors.xcassets; path = PhotoSequenceVideo/Colors.xcassets; sourceTree = "<group>"; };
+		A294B5E2C2584E4284861CC6 /* BootSplash.storyboard */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = BootSplash.storyboard; path = PhotoSequenceVideo/BootSplash.storyboard; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -53,6 +57,8 @@
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 				87794B9112B9C85EB629E4F7 /* background.wav */,
+				A294B5E2C2584E4284861CC6 /* BootSplash.storyboard */,
+				9698EEAD4A094A5D86F5B02E /* Colors.xcassets */,
 			);
 			name = PhotoSequenceVideo;
 			sourceTree = "<group>";
@@ -168,6 +174,8 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				95CECBDE9A15F87D2ACDEA2A /* PrivacyInfo.xcprivacy in Resources */,
 				3E6C3DE81668E239B3E09979 /* background.wav in Resources */,
+				192431519C624AEBA34662DD /* BootSplash.storyboard in Resources */,
+				A06B42C64B974C2FBD03294A /* Colors.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
