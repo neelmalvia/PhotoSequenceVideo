@@ -1,10 +1,17 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools">
   <uses-permission android:name="android.permission.INTERNET" />
 
   <!-- Saving the exported video to the gallery on Android 9 and below -->
   <uses-permission
     android:name="android.permission.WRITE_EXTERNAL_STORAGE"
     android:maxSdkVersion="28" />
+  <!-- Never needed: photos come from the system picker, and saving uses
+       MediaStore. Added implicitly because react-native-fs declares
+       WRITE_EXTERNAL_STORAGE, so remove it from the merged manifest. -->
+  <uses-permission
+    android:name="android.permission.READ_EXTERNAL_STORAGE"
+    tools:node="remove" />
 
   <application
     android:name=".MainApplication"
