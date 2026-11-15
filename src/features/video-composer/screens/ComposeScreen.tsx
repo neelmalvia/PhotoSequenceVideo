@@ -32,6 +32,7 @@ import { useVideoComposer } from '../hooks/useVideoComposer';
 const config = DEFAULT_COMPOSITION_CONFIG;
 const ASPECT = config.height / config.width;
 const ENTER_FALLBACK_MS = 1000;
+const OFFSCREEN_GAP = 100;
 
 export function ComposeScreen({ navigation }: RootScreenProps<'Compose'>) {
   const photos = useSelectionStore(s => s.photos);
@@ -39,15 +40,14 @@ export function ComposeScreen({ navigation }: RootScreenProps<'Compose'>) {
   const composer = useVideoComposer(photos, config);
   const { status, start, timeline } = composer;
 
-  // The recorder copies the preview's on-screen pixels, so its size on
-  // screen IS the video's resolution: make it exactly config.width physical
-  // pixels wide (smaller would upscale and blur the export).
+  // The recording stage is config.width physical pixels wide, so the export
+  // is never upscaled. It renders off-screen (see below).
   const { width: windowWidth } = useWindowDimensions();
-  const stageWidth = Math.min(
-    Math.ceil(config.width / PixelRatio.get()),
-    windowWidth - spacing.md * 2,
-  );
+  const stageWidth = Math.ceil(config.width / PixelRatio.get());
   const stageHeight = Math.round(stageWidth * ASPECT);
+  // The visible mirror takes a bit under half the content width.
+  const previewWidth = Math.round((windowWidth - spacing.md * 2) * 0.44);
+  const previewHeight = Math.round(previewWidth * ASPECT);
 
   /** Renders into a new library slot, then records it in the library. */
   const renderIntoLibrary = useCallback(async () => {
@@ -111,37 +111,40 @@ export function ComposeScreen({ navigation }: RootScreenProps<'Compose'>) {
   }, [status, navigation]);
 
   const seconds = (timeline.durationMs / 1000).toFixed(1);
+  const failed = status === 'error';
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <AppHeader title="Creating video" onBack={navigation.goBack} />
+
       {/*
-        The stage is the recording surface: the recorder copies these exact
-        on-screen pixels. It must never scroll or sit under anything (the
-        header, a toast), or that gets baked into the video. So it lives in
-        a fixed area, and only the details below it can scroll.
+        Recording surface, kept OFF-SCREEN at full resolution. Off-screen,
+        the recorder draws the view itself (Android falls back from copying
+        screen pixels to View.draw; iOS uses drawHierarchy), so the export is
+        always 720 px sharp and nothing on screen (header, toasts, the
+        navigation transition) can end up in the video. The user sees the
+        smaller mirror below, driven by the same frames.
       */}
-      <View style={styles.stageArea}>
-        <View
-          style={[
-            styles.stageFrame,
-            { width: stageWidth, height: stageHeight },
-          ]}
+      <View
+        pointerEvents="none"
+        style={[
+          styles.offscreen,
+          { left: windowWidth + OFFSCREEN_GAP, width: stageWidth },
+        ]}
+      >
+        <RecordingView
+          sessionId={composer.sessionId}
+          style={{ width: stageWidth, height: stageHeight }}
         >
-          <RecordingView
-            sessionId={composer.sessionId}
-            style={{ width: stageWidth, height: stageHeight }}
-          >
-            <SlideStage
-              photos={photos}
-              frame={composer.frame}
-              frameIndex={composer.frameIndex}
-              width={stageWidth}
-              onFrameCommitted={composer.onFrameCommitted}
-              onImagesSettled={composer.onImagesSettled}
-            />
-          </RecordingView>
-        </View>
+          <SlideStage
+            photos={photos}
+            frame={composer.frame}
+            frameIndex={composer.frameIndex}
+            width={stageWidth}
+            onFrameCommitted={composer.onFrameCommitted}
+            onImagesSettled={composer.onImagesSettled}
+          />
+        </RecordingView>
       </View>
 
       <ScrollView
@@ -149,20 +152,34 @@ export function ComposeScreen({ navigation }: RootScreenProps<'Compose'>) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.intro}>
-          <Text style={styles.title}>
-            {status === 'error'
-              ? 'Something went wrong'
-              : 'Your video is on its way'}
-          </Text>
-          <View style={styles.pills}>
-            <Pill icon={ImageIcon} label={`${photos.length} photos`} />
-            <Pill icon={Clock} label={`${seconds}s`} />
-            <Pill icon={AudioLines} label="Music" />
+        <View style={styles.hero}>
+          <View
+            style={[
+              styles.preview,
+              { width: previewWidth, height: previewHeight },
+            ]}
+          >
+            <SlideStage
+              photos={photos}
+              frame={composer.frame}
+              frameIndex={composer.frameIndex}
+              width={previewWidth}
+            />
+          </View>
+          <View style={styles.heroText}>
+            <Text style={styles.eyebrow}>Live preview</Text>
+            <Text style={styles.title}>
+              {failed ? 'Something went wrong' : 'Your video is on its way'}
+            </Text>
+            <View style={styles.pills}>
+              <Pill icon={ImageIcon} label={`${photos.length} photos`} />
+              <Pill icon={Clock} label={`${seconds}s`} />
+              <Pill icon={AudioLines} label="Music" />
+            </View>
           </View>
         </View>
 
-        {status === 'error' ? (
+        {failed ? (
           <View style={styles.errorCard}>
             <Text style={styles.errorText}>
               {composer.error ?? 'Rendering failed. Please try again.'}
@@ -178,7 +195,7 @@ export function ComposeScreen({ navigation }: RootScreenProps<'Compose'>) {
       </ScrollView>
 
       <View style={styles.footer}>
-        {status === 'error' ? (
+        {failed ? (
           <>
             <Button title="Try again" onPress={renderIntoLibrary} />
             <Button
@@ -204,29 +221,33 @@ export function ComposeScreen({ navigation }: RootScreenProps<'Compose'>) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  // Top padding keeps the stage clear of toasts, which appear just below
-  // the status bar and would otherwise be captured into the video.
-  stageArea: { alignItems: 'center', paddingTop: spacing.lg + spacing.sm },
+  // Positioned past the right edge of the window (left is set inline).
+  offscreen: { position: 'absolute', top: 0, backgroundColor: colors.black },
   scroll: { flex: 1 },
-  content: {
-    alignItems: 'center',
-    padding: spacing.md,
-    paddingTop: spacing.md,
-    gap: spacing.md - 4,
+  content: { padding: spacing.md, paddingTop: spacing.lg, gap: spacing.lg },
+  hero: { flexDirection: 'row', alignItems: 'center', gap: spacing.md + 4 },
+  // The visible preview is only a mirror, so it can be rounded and clipped.
+  preview: {
+    borderRadius: radius.lg - 4,
+    overflow: 'hidden',
+    backgroundColor: colors.black,
   },
-  // No border radius or clipping here: on Android the recorder captures the
-  // on-screen pixels, so a rounded clip would be baked into the video.
-  stageFrame: { backgroundColor: colors.black },
-  intro: { alignItems: 'center', gap: 6 },
-  title: { color: colors.text, fontSize: 20, fontWeight: '700' },
-  pills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: spacing.sm,
+  heroText: { flex: 1, gap: spacing.sm },
+  eyebrow: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '500',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
+  title: {
+    color: colors.text,
+    fontSize: 26,
+    fontWeight: '700',
+    lineHeight: 32,
+  },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm - 2 },
   errorCard: {
-    alignSelf: 'stretch',
     padding: spacing.md,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
