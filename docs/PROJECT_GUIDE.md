@@ -240,6 +240,14 @@ and mirrors changes made in either place (rules in `trashPolicy.ts`):
 | Deleted for good | Deleted for good | Kept, marked unsaved so it can be saved again |
 | Unknown (iOS, no access) | Deleted after 30 days | No change |
 
+On Android the app holds no media permissions, so it can only see gallery
+items it created. `GalleryTrashModule.kt` tells "gone" from "exists but not
+visible" by opening the item, and reports the latter as unknown so the sync
+never deletes on a guess. Trashing an item the app doesn't own shows the
+system "Allow … to move this video to trash?" dialog; Deny keeps both copies.
+`READ_EXTERNAL_STORAGE`, which `react-native-fs` would otherwise pull in, is
+removed in `AndroidManifest.xml`.
+
 ### App icon and splash screen
 
 The logo has two sources in `assets/brand/`: `logo-mark.svg` (the mark alone)
