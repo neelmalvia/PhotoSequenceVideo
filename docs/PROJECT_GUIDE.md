@@ -229,9 +229,16 @@ const persist = (videos: LibraryVideo[]): Promise<void> => {
 ```
 
 Gallery-saved videos use a soft delete: the app copy stays hidden while the
-gallery copy is in system trash. `useGalleryTrashSync.ts` checks again on
-startup and when the app returns to the foreground; restoring the gallery
-copy makes the video visible again.
+gallery copy is in system trash. `useGalleryTrashSync.ts` checks every video
+with a gallery copy on startup and when the app returns to the foreground,
+and mirrors changes made in either place (rules in `trashPolicy.ts`):
+
+| Gallery copy | App copy deleted in the app | App copy still visible |
+| --- | --- | --- |
+| In the gallery (restored) | Shown again | No change |
+| In the system trash | Stays hidden | Hidden (mirrors the gallery delete) |
+| Deleted for good | Deleted for good | Kept, marked unsaved so it can be saved again |
+| Unknown (iOS, no access) | Deleted after 30 days | No change |
 
 ### App icon and splash screen
 
